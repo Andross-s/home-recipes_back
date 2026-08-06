@@ -2,7 +2,9 @@ import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import compression from "compression";
+import multer from "multer";
 import { HttpError } from "./utils/HttpError";
+import router from "./routes";
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: 200, message: "Home Recipes API is up and running" });
 });
 
+app.use("/api", router);
+
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
     status: 404,
@@ -43,6 +47,15 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     res.status(error.status).json({
       status: error.status,
       errorCode: error.errorCode,
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof multer.MulterError) {
+    res.status(400).json({
+      status: 400,
+      errorCode: error.code === "LIMIT_FILE_SIZE" ? "FILE_TOO_LARGE" : "FILE_UPLOAD_ERROR",
       message: error.message,
     });
     return;
