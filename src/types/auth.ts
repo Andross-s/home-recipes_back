@@ -1,6 +1,11 @@
 export type UserRole = "user" | "admin";
 
-export interface AuthenticatedUser {
-  id: string;
+export interface JwtPayload {
   role: UserRole;
+  id: string;
+}
+
+export interface AuthenticatedUser {
+  role: UserRole;
+  id: string;
 }
