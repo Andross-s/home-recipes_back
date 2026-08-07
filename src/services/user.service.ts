@@ -10,7 +10,9 @@ const AVATAR_TRANSFORMATION = [
 ];
 
 export const getMe = async (userId: string): Promise<IUser> => {
-  const user = await User.findById(userId);
+  // .lean(): password/verificationToken stay excluded (select: false on the
+  // schema applies regardless of lean), and this doc is never saved.
+  const user = await User.findById(userId).lean<IUser>();
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }
@@ -18,7 +20,7 @@ export const getMe = async (userId: string): Promise<IUser> => {
 };
 
 export const updateName = async (userId: string, name: string): Promise<IUser> => {
-  const user = await User.findByIdAndUpdate(userId, { name }, { new: true });
+  const user = await User.findByIdAndUpdate(userId, { name }, { new: true }).lean<IUser>();
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }
@@ -32,7 +34,7 @@ export const updateAvatar = async (userId: string, fileBuffer: Buffer): Promise<
     AVATAR_TRANSFORMATION,
   );
 
-  const user = await User.findByIdAndUpdate(userId, { avatarUrl }, { new: true });
+  const user = await User.findByIdAndUpdate(userId, { avatarUrl }, { new: true }).lean<IUser>();
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }

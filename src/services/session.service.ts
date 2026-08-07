@@ -37,7 +37,7 @@ export const refreshSession = async (refreshToken: string): Promise<TokenPair> =
     throw new HttpError(401, "INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired");
   }
 
-  const session = await Session.findOne({ refreshToken });
+  const session = await Session.findOne({ refreshToken }).lean();
   if (!session || session.refreshTokenValidUntil < new Date()) {
     throw new HttpError(401, "SESSION_NOT_FOUND", "Session not found or expired");
   }

@@ -9,14 +9,15 @@ interface IngredientPayload {
 
 export const getIngredients = async (search?: string): Promise<IIngredient[]> => {
   const filter = search ? { name: { $regex: search, $options: "i" } } : {};
-  return Ingredient.find(filter).sort({ name: 1 });
+  // .lean(): read-only list, never saved — skips hydrating full documents.
+  return Ingredient.find(filter).sort({ name: 1 }).lean<IIngredient[]>();
 };
 
 export const createIngredient = async (
   payload: IngredientPayload,
   fileBuffer?: Buffer,
 ): Promise<IIngredient> => {
-  const existing = await Ingredient.findOne({ name: payload.name });
+  const existing = await Ingredient.exists({ name: payload.name });
   if (existing) {
     throw new HttpError(
       409,
@@ -49,7 +50,7 @@ export const updateIngredient = async (
   }
 
   if (payload.name && payload.name !== ingredient.name) {
-    const existing = await Ingredient.findOne({ name: payload.name });
+    const existing = await Ingredient.exists({ name: payload.name });
     if (existing) {
       throw new HttpError(
         409,

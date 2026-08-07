@@ -27,14 +27,16 @@ export const authenticate = async (
       throw new HttpError(401, "INVALID_ACCESS_TOKEN", "Access token is invalid or expired");
     }
 
-    const session = await Session.findOne({ accessToken });
+    // .lean() on both lookups: this runs on every authenticated request and
+    // neither result is ever mutated/saved here.
+    const session = await Session.findOne({ accessToken }).lean();
     if (!session || session.accessTokenValidUntil < new Date()) {
       throw new HttpError(401, "SESSION_NOT_FOUND", "Session not found or expired");
     }
 
     // Role is read from the current user document rather than the JWT claim,
     // so a role change or block takes effect immediately, not after re-login.
-    const user = await User.findById(session.userId);
+    const user = await User.findById(session.userId).lean();
     if (!user) {
       throw new HttpError(401, "USER_NOT_FOUND", "User not found");
     }

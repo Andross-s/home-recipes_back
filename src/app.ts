@@ -36,6 +36,11 @@ app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: 200, message: "Home Recipes API is up and running" });
 });
 
+// No DB access — stays fast even mid cold-start, for external keep-alive pings.
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({ status: 200, message: "OK" });
+});
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use("/api", router);

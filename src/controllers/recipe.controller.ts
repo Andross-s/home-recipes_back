@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as recipeService from "../services/recipe.service";
 
 const DEFAULT_PER_PAGE = 12;
-const MAX_PER_PAGE = 100;
+const MAX_PER_PAGE = 50;
 
 const parsePage = (value: unknown): number => {
   const parsed = Number(value);
