@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as authController from "../controllers/auth.controller";
+import { authRateLimiter } from "../middlewares/authRateLimiter";
 import { authenticate } from "../middlewares/authenticate";
 import { validateBody } from "../middlewares/validateBody";
 import {
@@ -11,6 +12,8 @@ import {
 import { ctrlWrapper } from "../utils/ctrlWrapper";
 
 const router = Router();
+
+router.use(authRateLimiter);
 
 router.post("/register", validateBody(registerSchema), ctrlWrapper(authController.register));
 router.get("/verify-email/:token", ctrlWrapper(authController.verifyEmail));
