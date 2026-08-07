@@ -130,21 +130,33 @@ src/
 
 ### Categories
 
+Категорії — курований довідник (керує лише admin), тому `name` — мультимовний
+об'єкт `{ uk, en?, ka? }`: `uk` обов'язковий (базова мова-фолбек), `en`/`ka`
+опційні, поки адмін не переклав. `GET` завжди повертає всі три мови одразу —
+фронт сам обирає локаль і фолбечить на `uk`, якщо потрібної мови немає.
+
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
 | GET | `/api/categories` | Список категорій, фільтр `?group=` | Public |
-| POST | `/api/categories` | Створити категорію | Admin |
-| PATCH | `/api/categories/:id` | Оновити категорію | Admin |
+| POST | `/api/categories` | Створити категорію, тіло `{ name: { uk, en?, ka? }, group }` | Admin |
+| PATCH | `/api/categories/:id` | Часткове оновлення (напр. лише `name.ka`, без зміни uk/en) | Admin |
 | DELETE | `/api/categories/:id` | Видалити (409, якщо є рецепти) | Admin |
 
 ### Ingredients
 
+Той самий мультимовний `name`, що й у категорій. Унікальність перевіряється
+саме по `name.uk`.
+
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
-| GET | `/api/ingredients` | Список інгредієнтів, пошук `?search=` | Public |
-| POST | `/api/ingredients` | Створити інгредієнт | Admin |
-| PATCH | `/api/ingredients/:id` | Оновити інгредієнт | Admin |
+| GET | `/api/ingredients` | Список, пошук `?search=&lang=uk\|en\|ka` (шукає в `name[lang]`, дефолт `uk`) | Public |
+| POST | `/api/ingredients` | Створити, тіло `{ name: { uk, en?, ka? } }` | Admin |
+| PATCH | `/api/ingredients/:id` | Часткове оновлення `name.*` | Admin |
 | DELETE | `/api/ingredients/:id` | Видалити (409, якщо є рецепти) | Admin |
+
+> При завантаженні зображення (`multipart/form-data`) поле `name` передається
+> як JSON-рядок в тому ж полі форми (як і `ingredients`/`steps` у рецептах) —
+> див. приклади в Swagger UI (`/api-docs`).
 
 ### Recipes
 

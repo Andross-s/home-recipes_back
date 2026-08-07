@@ -71,11 +71,21 @@ export const swaggerDocument = {
           refreshToken: { type: "string" },
         },
       },
+      MultilingualName: {
+        type: "object",
+        description: "uk is the required fallback locale; en/ka are optional until translated.",
+        required: ["uk"],
+        properties: {
+          uk: { type: "string", example: "Супи" },
+          en: { type: "string", example: "Soups" },
+          ka: { type: "string" },
+        },
+      },
       Category: {
         type: "object",
         properties: {
           _id: { type: "string" },
-          name: { type: "string", example: "Soups" },
+          name: { $ref: "#/components/schemas/MultilingualName" },
           group: { type: "string", enum: ["recipes", "conservation"] },
           imageUrl: { type: "string", nullable: true },
           createdAt: { type: "string", format: "date-time" },
@@ -86,7 +96,7 @@ export const swaggerDocument = {
         type: "object",
         properties: {
           _id: { type: "string" },
-          name: { type: "string", example: "Potato" },
+          name: { $ref: "#/components/schemas/MultilingualName" },
           imageUrl: { type: "string", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -418,6 +428,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Categories"],
         summary: "Create a category (admin only)",
+        description: "`name` is JSON-encoded when sent as multipart/form-data alongside an image.",
         security: bearerAuth,
         requestBody: {
           required: true,
@@ -427,9 +438,22 @@ export const swaggerDocument = {
                 type: "object",
                 required: ["name", "group"],
                 properties: {
-                  name: { type: "string" },
+                  name: {
+                    type: "string",
+                    description: 'JSON string, e.g. \'{"uk":"Супи","en":"Soups"}\' (uk required)',
+                  },
                   group: { type: "string", enum: ["recipes", "conservation"] },
                   image: { type: "string", format: "binary" },
+                },
+              },
+            },
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "group"],
+                properties: {
+                  name: { $ref: "#/components/schemas/MultilingualName" },
+                  group: { type: "string", enum: ["recipes", "conservation"] },
                 },
               },
             },
@@ -447,6 +471,8 @@ export const swaggerDocument = {
       patch: {
         tags: ["Categories"],
         summary: "Update a category (admin only)",
+        description:
+          "Partial update — e.g. `name: { ka: \"...\" }` adds/replaces only that locale, uk/en are kept.",
         security: bearerAuth,
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
@@ -455,7 +481,10 @@ export const swaggerDocument = {
               schema: {
                 type: "object",
                 properties: {
-                  name: { type: "string" },
+                  name: {
+                    type: "string",
+                    description: 'JSON string, e.g. \'{"ka":"სუპები"}\' — partial, all locales optional',
+                  },
                   group: { type: "string", enum: ["recipes", "conservation"] },
                   image: { type: "string", format: "binary" },
                 },
@@ -489,7 +518,15 @@ export const swaggerDocument = {
       get: {
         tags: ["Ingredients"],
         summary: "List ingredients",
-        parameters: [{ name: "search", in: "query", schema: { type: "string" } }],
+        description: "`search` matches within the given locale's name field (default uk).",
+        parameters: [
+          { name: "search", in: "query", schema: { type: "string" } },
+          {
+            name: "lang",
+            in: "query",
+            schema: { type: "string", enum: ["uk", "en", "ka"], default: "uk" },
+          },
+        ],
         responses: {
           "200": {
             description: "Ingredient list",
@@ -515,6 +552,9 @@ export const swaggerDocument = {
       post: {
         tags: ["Ingredients"],
         summary: "Create an ingredient (admin only)",
+        description:
+          "`name` is JSON-encoded when sent as multipart/form-data alongside an image. " +
+          "Uniqueness is enforced on name.uk.",
         security: bearerAuth,
         requestBody: {
           required: true,
@@ -524,9 +564,19 @@ export const swaggerDocument = {
                 type: "object",
                 required: ["name"],
                 properties: {
-                  name: { type: "string" },
+                  name: {
+                    type: "string",
+                    description: 'JSON string, e.g. \'{"uk":"Картопля","en":"Potato"}\' (uk required)',
+                  },
                   image: { type: "string", format: "binary" },
                 },
+              },
+            },
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name"],
+                properties: { name: { $ref: "#/components/schemas/MultilingualName" } },
               },
             },
           },
@@ -544,6 +594,8 @@ export const swaggerDocument = {
       patch: {
         tags: ["Ingredients"],
         summary: "Update an ingredient (admin only)",
+        description:
+          "Partial update — e.g. `name: { ka: \"...\" }` adds/replaces only that locale, uk/en are kept.",
         security: bearerAuth,
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
@@ -552,7 +604,10 @@ export const swaggerDocument = {
               schema: {
                 type: "object",
                 properties: {
-                  name: { type: "string" },
+                  name: {
+                    type: "string",
+                    description: 'JSON string, e.g. \'{"ka":"კარტოფილი"}\' — partial, all locales optional',
+                  },
                   image: { type: "string", format: "binary" },
                 },
               },

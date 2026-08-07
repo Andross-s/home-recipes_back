@@ -1,10 +1,14 @@
 import { Request, Response } from "express";
 import * as ingredientService from "../services/ingredient.service";
+import { LOCALES, Locale } from "../types/i18n";
+
+const isLocale = (value: unknown): value is Locale => LOCALES.includes(value as Locale);
 
 export const getIngredients = async (req: Request, res: Response): Promise<void> => {
-  const { search } = req.query;
+  const { search, lang } = req.query;
   const ingredients = await ingredientService.getIngredients(
     typeof search === "string" ? search : undefined,
+    isLocale(lang) ? lang : "uk",
   );
   // Ingredients change rarely (admin-only writes) — safe to let clients/CDNs
   // cache the list briefly instead of hitting the DB on every page load.

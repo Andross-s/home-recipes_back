@@ -1,9 +1,10 @@
 import Joi from "joi";
+import { multilingualNameSchema, multilingualNameUpdateSchema } from "./i18n.schemas";
 
 export const ingredientSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(100).required(),
+  name: multilingualNameSchema.required(),
 });
 
 export const updateIngredientSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(100).required(),
+  name: multilingualNameUpdateSchema.required(),
 });

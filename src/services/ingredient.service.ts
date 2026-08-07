@@ -1,23 +1,28 @@
 import { Ingredient, IIngredient } from "../models/ingredient";
 import { Recipe } from "../models/recipe";
+import { Locale, MultilingualName } from "../types/i18n";
 import { HttpError } from "../utils/HttpError";
 import { uploadImage } from "./cloudinary.service";
 
 interface IngredientPayload {
-  name: string;
+  name: MultilingualName;
 }
 
-export const getIngredients = async (search?: string): Promise<IIngredient[]> => {
-  const filter = search ? { name: { $regex: search, $options: "i" } } : {};
+export const getIngredients = async (
+  search?: string,
+  lang: Locale = "uk",
+): Promise<IIngredient[]> => {
+  const filter = search ? { [`name.${lang}`]: { $regex: search, $options: "i" } } : {};
   // .lean(): read-only list, never saved — skips hydrating full documents.
-  return Ingredient.find(filter).sort({ name: 1 }).lean<IIngredient[]>();
+  return Ingredient.find(filter).sort({ "name.uk": 1 }).lean<IIngredient[]>();
 };
 
 export const createIngredient = async (
   payload: IngredientPayload,
   fileBuffer?: Buffer,
 ): Promise<IIngredient> => {
-  const existing = await Ingredient.exists({ name: payload.name });
+  // Uniqueness is enforced on name.uk — the base/fallback locale.
+  const existing = await Ingredient.exists({ "name.uk": payload.name.uk });
   if (existing) {
     throw new HttpError(
       409,
@@ -49,8 +54,8 @@ export const updateIngredient = async (
     throw new HttpError(404, "INGREDIENT_NOT_FOUND", "Ingredient not found");
   }
 
-  if (payload.name && payload.name !== ingredient.name) {
-    const existing = await Ingredient.exists({ name: payload.name });
+  if (payload.name?.uk && payload.name.uk !== ingredient.name.uk) {
+    const existing = await Ingredient.exists({ "name.uk": payload.name.uk });
     if (existing) {
       throw new HttpError(
         409,
@@ -60,7 +65,13 @@ export const updateIngredient = async (
     }
   }
 
-  Object.assign(ingredient, payload);
+  // Merge rather than replace `name` so PATCH can set e.g. only name.ka
+  // without wiping out the already-translated uk/en values.
+  const { name, ...rest } = payload;
+  if (name) {
+    ingredient.name = { ...ingredient.name, ...name };
+  }
+  Object.assign(ingredient, rest);
 
   if (fileBuffer) {
     ingredient.imageUrl = await uploadImage(
