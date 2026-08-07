@@ -11,7 +11,8 @@ interface CategoryPayload {
 
 export const getCategories = async (group?: string): Promise<ICategory[]> => {
   const filter = group ? { group } : {};
-  return Category.find(filter).sort({ name: 1 });
+  // .lean(): read-only list, never saved — skips hydrating full documents.
+  return Category.find(filter).sort({ name: 1 }).lean<ICategory[]>();
 };
 
 export const createCategory = async (

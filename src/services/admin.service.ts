@@ -45,7 +45,8 @@ export const getUsers = async (filter: UserListFilter): Promise<UserListResult> 
     User.find(query)
       .sort({ createdAt: -1 })
       .skip((filter.page - 1) * filter.perPage)
-      .limit(filter.perPage),
+      .limit(filter.perPage)
+      .lean<IUser[]>(),
     User.countDocuments(query),
   ]);
 

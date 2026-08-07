@@ -39,7 +39,7 @@ interface RecipeListResult {
 }
 
 const assertCategoryMatchesGroup = async (categoryId: string, group: Group): Promise<void> => {
-  const category = await Category.findById(categoryId);
+  const category = await Category.findById(categoryId).lean();
   if (!category) {
     throw new HttpError(404, "CATEGORY_NOT_FOUND", "Category not found");
   }
@@ -79,7 +79,8 @@ export const getRecipes = async (filter: RecipeListFilter): Promise<RecipeListRe
     Recipe.find(query)
       .sort({ createdAt: -1 })
       .skip((filter.page - 1) * filter.perPage)
-      .limit(filter.perPage),
+      .limit(filter.perPage)
+      .lean<IRecipe[]>(),
     Recipe.countDocuments(query),
   ]);
 
@@ -90,7 +91,8 @@ export const getRecipeById = async (id: string): Promise<IRecipe> => {
   const recipe = await Recipe.findById(id)
     .populate("category")
     .populate("ingredients.ingredient")
-    .populate("owner", "name");
+    .populate("owner", "name")
+    .lean<IRecipe>();
   if (!recipe) {
     throw new HttpError(404, "RECIPE_NOT_FOUND", "Recipe not found");
   }
@@ -170,17 +172,20 @@ export const getOwnRecipes = async (
     Recipe.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)
-      .limit(perPage),
+      .limit(perPage)
+      .lean<IRecipe[]>(),
     Recipe.countDocuments(query),
   ]);
   return { data, page, perPage, totalItems };
 };
 
 export const getFavoriteRecipes = async (userId: string): Promise<IRecipe[]> => {
-  const user = await User.findById(userId).populate<{ favorites: IRecipe[] }>({
-    path: "favorites",
-    populate: [{ path: "category" }, { path: "owner", select: "name" }],
-  });
+  const user = await User.findById(userId)
+    .populate({
+      path: "favorites",
+      populate: [{ path: "category" }, { path: "owner", select: "name" }],
+    })
+    .lean<{ favorites: IRecipe[] }>();
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }
@@ -188,8 +193,8 @@ export const getFavoriteRecipes = async (userId: string): Promise<IRecipe[]> => 
 };
 
 export const addFavorite = async (userId: string, recipeId: string): Promise<void> => {
-  const recipe = await Recipe.findById(recipeId);
-  if (!recipe) {
+  const recipeExists = await Recipe.exists({ _id: recipeId });
+  if (!recipeExists) {
     throw new HttpError(404, "RECIPE_NOT_FOUND", "Recipe not found");
   }
   await User.updateOne({ _id: userId }, { $addToSet: { favorites: recipeId } });

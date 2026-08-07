@@ -6,6 +6,9 @@ export const getIngredients = async (req: Request, res: Response): Promise<void>
   const ingredients = await ingredientService.getIngredients(
     typeof search === "string" ? search : undefined,
   );
+  // Ingredients change rarely (admin-only writes) — safe to let clients/CDNs
+  // cache the list briefly instead of hitting the DB on every page load.
+  res.set("Cache-Control", "public, max-age=60");
   res.status(200).json({ status: 200, data: { ingredients } });
 };
 

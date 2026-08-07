@@ -16,7 +16,7 @@ interface RegisterPayload {
 }
 
 export const register = async (payload: RegisterPayload): Promise<void> => {
-  const existingUser = await User.findOne({ email: payload.email });
+  const existingUser = await User.exists({ email: payload.email });
   if (existingUser) {
     throw new HttpError(409, "EMAIL_ALREADY_EXISTS", "User with this email already exists");
   }
@@ -109,6 +109,9 @@ interface LoginResult {
 }
 
 export const login = async (payload: LoginPayload): Promise<LoginResult> => {
+  // Not .lean(): password is explicitly selected for the bcrypt check below,
+  // and this document is returned to the client — it must stay hydrated so
+  // toJSON's transform strips the password before serialization.
   const user = await User.findOne({ email: payload.email }).select("+password");
   if (!user) {
     throw new HttpError(401, "INVALID_CREDENTIALS", "Email or password is invalid");

@@ -44,4 +44,10 @@ const recipeSchema = new Schema<IRecipe>(
   { timestamps: true, versionKey: false },
 );
 
+// Matches the most common list filters (GET /api/recipes ?group=&category=).
+recipeSchema.index({ group: 1, category: 1 });
+// Text index backs a future switch to MongoDB $text search; the current
+// title search still uses a regex for substring matching (see recipe.service.ts).
+recipeSchema.index({ title: "text" });
+
 export const Recipe = model<IRecipe>("Recipe", recipeSchema);
