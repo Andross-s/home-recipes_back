@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as userController from "../controllers/user.controller";
 import { authenticate } from "../middlewares/authenticate";
-import { avatarUpload } from "../middlewares/avatarUpload";
+import { imageUpload } from "../middlewares/imageUpload";
 import { validateBody } from "../middlewares/validateBody";
 import { updateUserSchema } from "../models/user.schemas";
 import { ctrlWrapper } from "../utils/ctrlWrapper";
@@ -18,7 +18,7 @@ router.patch(
 router.patch(
   "/me/avatar",
   authenticate,
-  avatarUpload.single("avatar"),
+  imageUpload.single("avatar"),
   ctrlWrapper(userController.updateAvatar),
 );
 
