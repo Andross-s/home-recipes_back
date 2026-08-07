@@ -1,6 +1,7 @@
 import { Ingredient, IIngredient } from "../models/ingredient";
 import { Recipe } from "../models/recipe";
 import { Locale, MultilingualName } from "../types/i18n";
+import { escapeRegex } from "../utils/escapeRegex";
 import { HttpError } from "../utils/HttpError";
 import { uploadImage } from "./cloudinary.service";
 
@@ -12,7 +13,7 @@ export const getIngredients = async (
   search?: string,
   lang: Locale = "uk",
 ): Promise<IIngredient[]> => {
-  const filter = search ? { [`name.${lang}`]: { $regex: search, $options: "i" } } : {};
+  const filter = search ? { [`name.${lang}`]: { $regex: escapeRegex(search), $options: "i" } } : {};
   // .lean(): read-only list, never saved — skips hydrating full documents.
   return Ingredient.find(filter).sort({ "name.uk": 1 }).lean<IIngredient[]>();
 };

@@ -2,6 +2,7 @@ import { Recipe } from "../models/recipe";
 import { Session } from "../models/session";
 import { IUser, User } from "../models/user";
 import { UserRole } from "../types/auth";
+import { escapeRegex } from "../utils/escapeRegex";
 import { HttpError } from "../utils/HttpError";
 
 interface UserListFilter {
@@ -35,9 +36,10 @@ export const getUsers = async (filter: UserListFilter): Promise<UserListResult> 
   const query: Record<string, unknown> = {};
   if (filter.role) query.role = filter.role;
   if (filter.search) {
+    const pattern = escapeRegex(filter.search);
     query.$or = [
-      { name: { $regex: filter.search, $options: "i" } },
-      { email: { $regex: filter.search, $options: "i" } },
+      { name: { $regex: pattern, $options: "i" } },
+      { email: { $regex: pattern, $options: "i" } },
     ];
   }
 

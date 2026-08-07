@@ -15,6 +15,7 @@ REST API для pet-проєкту **Home Recipes** — сайту з рецеп
   акаунту (див. коментар у [src/services/email.service.ts](src/services/email.service.ts))
 - **helmet** — базові security-заголовки
 - **express-rate-limit** — обмеження частоти запитів на `/api/auth/*`
+- **express-mongo-sanitize** — прибирає `$`/`.`-ключі з вхідних даних (захист від NoSQL-ін'єкцій)
 - **Swagger UI Express** — документація API, доступна на `/api-docs`
 - Деплой — **Render** (Web Service)
 
@@ -257,3 +258,48 @@ src/
   `toJSON`-трансформацію, яка приховує `password`).
 - **Cache-Control** (`public, max-age=60`) на `GET /api/categories` і
   `GET /api/ingredients` — ці колекції адмін змінює рідко.
+
+## Security checklist
+
+Стан на після аудиту безпеки бекенду (див. нижче список перевіреного/виправленого).
+
+- [x] **IDOR / контроль доступу** — `PATCH`/`DELETE /api/recipes/:id` перевіряють
+  `owner === req.user.id || role === 'admin'` ([recipe.service.ts](src/services/recipe.service.ts));
+  `/api/recipes/own`, `/api/recipes/favorites` беруть користувача лише з токена
+  (`req.user!.id`), не з параметрів запиту; усі `/api/admin/*` проходять і
+  `authenticate`, і `isAdmin` ([admin.routes.ts](src/routes/admin.routes.ts));
+  `PATCH /api/users/me` приймає лише `{ name }` — `role` не можна підвищити
+  собі через цей ендпоінт (whitelist на рівні Joi-схеми й контролера).
+- [x] **Токени** — access 15 хв / refresh 30 днів, окремі секрети
+  ([jwt.ts](src/utils/jwt.ts)); паролі — bcrypt, 10 salt rounds; `password`/
+  `verificationToken` ніколи не серіалізуються клієнту (`select: false` +
+  `toJSON`-transform, [user.ts](src/models/user.ts)); refresh token одноразовий —
+  сесія видаляється при рефреші, видається нова пара ([session.service.ts](src/services/session.service.ts));
+  `express-rate-limit` на всіх `/api/auth/*` (30 запитів/15 хв на IP).
+- [x] **Валідація вхідних даних** — Joi зі `stripUnknown: true` на кожному
+  POST/PATCH; `express-mongo-sanitize` прибирає `$`/`.`-ключі з
+  body/query/params (захист від NoSQL-ін'єкцій); `isValidId` на всіх `:id`
+  route-параметрах; глобальний обробник помилок конвертує Mongoose
+  `CastError` (невалідний ObjectId у query-фільтрах на кшталт `?category=`)
+  у чистий `400 INVALID_ID` замість `500`; пошукові `$regex`-запити
+  (`recipes?search=`, `ingredients?search=`, `admin/users?search=`)
+  екранують спецсимволи ([escapeRegex.ts](src/utils/escapeRegex.ts)) — захист
+  від ReDoS через довільний regex-патерн від клієнта.
+- [x] **Файли (Multer + Cloudinary)** — ліміт 5 МБ, білий список mimetype
+  (jpeg/png/webp) на бекенді ([imageUpload.ts](src/middlewares/imageUpload.ts));
+  завантаження йде через автентифікований Cloudinary SDK (не unsigned preset),
+  Cloudinary додатково відхиляє вміст, що не є валідним зображенням.
+- [x] **Загальний захист** — `helmet()` (усуває і `X-Powered-By`); CORS —
+  явний allowlist з `CORS_ORIGIN`, без `origin: "*"`, зі `credentials: true`;
+  `.env`/`atlas-credentials.env` у `.gitignore` й ніколи не потрапляли в git-історію;
+  обробник помилок у production не повертає stack trace чи внутрішній
+  текст помилки клієнту — тільки `status`/`errorCode`/дженерик-`message`,
+  повна помилка йде в `console.error` для логів; `npm audit` — 0 вразливостей
+  на момент аудиту.
+
+**Відомий компроміс:** access/refresh токени повертаються в тілі відповіді
+`/api/auth/login` і `/api/auth/refresh`, а не в `httpOnly`-cookie — фронтенд
+(Vercel) і бекенд (Render) на різних доменах, тому cookie-based refresh
+вимагав би додаткової інфраструктурної роботи (спільний домен або коректний
+`SameSite=None; Secure` + CORS `credentials`). Задокументовано тут навмисно,
+щоб рішення приймалось явно, а не за замовчуванням.
