@@ -4,7 +4,7 @@ import { HttpError } from "../utils/HttpError";
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
-export const avatarUpload = multer({
+export const imageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE_BYTES },
   fileFilter: (_req, file, callback) => {
