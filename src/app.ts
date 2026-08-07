@@ -1,8 +1,10 @@
 import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
-import cors from "cors";
 import compression from "compression";
+import cors from "cors";
+import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import multer from "multer";
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./docs/swagger";
@@ -31,6 +33,12 @@ app.use(
 );
 app.use(compression());
 app.use(express.json());
+// Strips keys starting with "$" or containing "." from body/query/params so
+// user input can never be interpreted as a Mongo operator (e.g. { $gt: "" }).
+// Defense-in-depth: route handlers already only forward typeof === "string"
+// query values and Joi-validated (stripUnknown) bodies into queries, but this
+// protects any future field that skips that path.
+app.use(mongoSanitize());
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: 200, message: "Home Recipes API is up and running" });
@@ -75,12 +83,28 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
-  const message = error instanceof Error ? error.message : "Internal Server Error";
+  // Bad ObjectId reaching a query that wasn't pre-checked by isValidId (e.g. a
+  // ?category=/?ingredient= filter) — a client input problem, not a server
+  // fault, so it gets a clean 400 instead of leaking a Mongoose error message.
+  if (error instanceof mongoose.Error.CastError) {
+    res.status(400).json({
+      status: 400,
+      errorCode: "INVALID_ID",
+      message: `Parameter "${error.path}" is not a valid id`,
+      data: null,
+    });
+    return;
+  }
+
+  // Unexpected errors are logged in full server-side; the client only ever
+  // gets a generic message so internal details (stack traces, DB/driver
+  // error text, file paths) never leak in the response.
+  console.error("Unhandled error:", error);
 
   res.status(500).json({
     status: 500,
     errorCode: "INTERNAL_SERVER_ERROR",
-    message,
+    message: "Internal Server Error",
     data: null,
   });
 });

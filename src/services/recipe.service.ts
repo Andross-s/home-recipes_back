@@ -4,6 +4,7 @@ import { Ingredient } from "../models/ingredient";
 import { IRecipe, Recipe } from "../models/recipe";
 import { User } from "../models/user";
 import { Group } from "../types/group";
+import { escapeRegex } from "../utils/escapeRegex";
 import { HttpError } from "../utils/HttpError";
 import { uploadImage } from "./cloudinary.service";
 
@@ -73,7 +74,7 @@ export const getRecipes = async (filter: RecipeListFilter): Promise<RecipeListRe
   if (filter.group) query.group = filter.group;
   if (filter.category) query.category = filter.category;
   if (filter.ingredient) query["ingredients.ingredient"] = filter.ingredient;
-  if (filter.search) query.title = { $regex: filter.search, $options: "i" };
+  if (filter.search) query.title = { $regex: escapeRegex(filter.search), $options: "i" };
 
   const [data, totalItems] = await Promise.all([
     Recipe.find(query)
