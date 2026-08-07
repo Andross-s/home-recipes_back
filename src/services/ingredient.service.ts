@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
 import { Ingredient, IIngredient } from "../models/ingredient";
+import { Recipe } from "../models/recipe";
 import { HttpError } from "../utils/HttpError";
 import { uploadImage } from "./cloudinary.service";
 
@@ -78,20 +78,15 @@ export const deleteIngredient = async (id: string): Promise<void> => {
     throw new HttpError(404, "INGREDIENT_NOT_FOUND", "Ingredient not found");
   }
 
-  // See category.service.ts for why this reads the mongoose registry instead
-  // of importing the Recipe model directly.
-  const RecipeModel = mongoose.models.Recipe;
-  if (RecipeModel) {
-    const recipesUsingIngredient = await RecipeModel.countDocuments({
-      "ingredients.ingredient": id,
-    });
-    if (recipesUsingIngredient > 0) {
-      throw new HttpError(
-        409,
-        "INGREDIENT_IN_USE",
-        "Ingredient cannot be deleted because recipes reference it",
-      );
-    }
+  const recipesUsingIngredient = await Recipe.countDocuments({
+    "ingredients.ingredient": id,
+  });
+  if (recipesUsingIngredient > 0) {
+    throw new HttpError(
+      409,
+      "INGREDIENT_IN_USE",
+      "Ingredient cannot be deleted because recipes reference it",
+    );
   }
 
   await ingredient.deleteOne();

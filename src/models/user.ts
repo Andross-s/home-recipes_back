@@ -13,6 +13,7 @@ export interface IUser extends Document {
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
   lastVerificationEmailSentAt?: Date;
+  favorites: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,11 @@ const userSchema = new Schema<IUser>(
     verificationToken: { type: String, select: false },
     verificationTokenExpiresAt: { type: Date, select: false },
     lastVerificationEmailSentAt: { type: Date, select: false },
+    // Embedded on User rather than a separate Favorite(userId, recipeId) model:
+    // favorites are only ever read/written scoped to one user, so there's no
+    // benefit to a join, and $addToSet/$pull give atomic, duplicate-safe toggling
+    // without a compound unique index.
+    favorites: { type: [Schema.Types.ObjectId], ref: "Recipe", default: [] },
   },
   {
     timestamps: true,
