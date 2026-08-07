@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
 import { Category, ICategory } from "../models/category";
+import { Recipe } from "../models/recipe";
 import { Group } from "../types/group";
 import { HttpError } from "../utils/HttpError";
 import { uploadImage } from "./cloudinary.service";
@@ -54,19 +54,13 @@ export const deleteCategory = async (id: string): Promise<void> => {
     throw new HttpError(404, "CATEGORY_NOT_FOUND", "Category not found");
   }
 
-  // The Recipe model is introduced in a later task. Reading it off the
-  // mongoose registry (instead of importing it) means this guard activates
-  // automatically once recipes exist, without a hard dependency today.
-  const RecipeModel = mongoose.models.Recipe;
-  if (RecipeModel) {
-    const recipesUsingCategory = await RecipeModel.countDocuments({ category: id });
-    if (recipesUsingCategory > 0) {
-      throw new HttpError(
-        409,
-        "CATEGORY_IN_USE",
-        "Category cannot be deleted because recipes reference it",
-      );
-    }
+  const recipesUsingCategory = await Recipe.countDocuments({ category: id });
+  if (recipesUsingCategory > 0) {
+    throw new HttpError(
+      409,
+      "CATEGORY_IN_USE",
+      "Category cannot be deleted because recipes reference it",
+    );
   }
 
   await category.deleteOne();
