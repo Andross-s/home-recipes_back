@@ -4,6 +4,7 @@ import { authenticate } from "../middlewares/authenticate";
 import { imageUpload } from "../middlewares/imageUpload";
 import { isAdmin } from "../middlewares/isAdmin";
 import { isValidId } from "../middlewares/isValidId";
+import { parseJsonFields } from "../middlewares/parseJsonFields";
 import { validateBody } from "../middlewares/validateBody";
 import { categorySchema, updateCategorySchema } from "../models/category.schemas";
 import { ctrlWrapper } from "../utils/ctrlWrapper";
@@ -16,6 +17,7 @@ router.post(
   authenticate,
   isAdmin,
   imageUpload.single("image"),
+  parseJsonFields("name"),
   validateBody(categorySchema),
   ctrlWrapper(categoryController.createCategory),
 );
@@ -25,6 +27,7 @@ router.patch(
   isAdmin,
   isValidId(),
   imageUpload.single("image"),
+  parseJsonFields("name"),
   validateBody(updateCategorySchema),
   ctrlWrapper(categoryController.updateCategory),
 );
