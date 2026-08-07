@@ -23,3 +23,11 @@ export const resendVerificationSchema = Joi.object({
 export const refreshSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
+
+export const updateUserRoleSchema = Joi.object({
+  role: Joi.string().valid("user", "admin").required(),
+});
+
+export const updateUserBlockSchema = Joi.object({
+  isBlocked: Joi.boolean().required(),
+});

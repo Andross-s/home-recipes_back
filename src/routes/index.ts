@@ -1,4 +1,5 @@
 import { Router } from "express";
+import adminRouter from "./admin.routes";
 import authRouter from "./auth.routes";
 import categoryRouter from "./category.routes";
 import ingredientRouter from "./ingredient.routes";
@@ -12,5 +13,6 @@ router.use("/users", userRouter);
 router.use("/categories", categoryRouter);
 router.use("/ingredients", ingredientRouter);
 router.use("/recipes", recipeRouter);
+router.use("/admin", adminRouter);
 
 export default router;
