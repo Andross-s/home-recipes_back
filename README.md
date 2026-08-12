@@ -193,10 +193,10 @@ src/
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Секрети для підпису токенів |
 | `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS` | Час життя токенів у секундах (опційно, є дефолти) |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Завантаження зображень |
-| `CORS_ORIGIN` | Дозволені origin через кому |
+| `CORS_ORIGIN` | Дозволені origin через кому, напр. `http://localhost:5173,https://home-recipes-front.vercel.app` (лише схема+хост, без шляху типу `/uk`) |
 | `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | SMTP для листів підтвердження. Порт 587 деякі провайдери/роутери блокують — якщо лист не йде, спробуйте `465`. Найпростіший робочий варіант для розробки — Gmail з [App Password](https://myaccount.google.com/apppasswords) |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` — логін заблоковано без підтвердження email |
-| `APP_URL` | URL **фронтенду** — використовується в посиланні листа підтвердження |
+| `APP_URL` | URL **фронтенду** — використовується в посиланні листа підтвердження. Локально `http://localhost:5173`, на проді — `https://home-recipes-front.vercel.app` |
 
 ## Деплой на Render
 
