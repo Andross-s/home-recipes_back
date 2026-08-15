@@ -130,7 +130,21 @@ export const swaggerDocument = {
           },
           steps: { type: "array", items: { type: "string" } },
           cookTime: { type: "integer", nullable: true, example: 30 },
-          imageUrl: { type: "string", nullable: true },
+          images: {
+            type: "array",
+            maxItems: 6,
+            items: {
+              type: "object",
+              properties: {
+                url: { type: "string" },
+                publicId: {
+                  type: "string",
+                  nullable: true,
+                  description: "Cloudinary public_id; null for images migrated from the old imageUrl field",
+                },
+              },
+            },
+          },
           owner: { type: "string", description: "User id (or { _id, name } on GET /recipes/{id})" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -669,7 +683,9 @@ export const swaggerDocument = {
       post: {
         tags: ["Recipes"],
         summary: "Create a recipe",
-        description: "Owner is taken from the access token. `ingredients`/`steps` are JSON-encoded strings when sent as multipart/form-data alongside an image.",
+        description:
+          "Owner is taken from the access token. `ingredients`/`steps` are JSON-encoded strings when " +
+          "sent as multipart/form-data alongside images. A photo isn't required to create a recipe.",
         security: bearerAuth,
         requestBody: {
           required: true,
@@ -689,7 +705,12 @@ export const swaggerDocument = {
                   },
                   steps: { type: "string", description: 'JSON string, e.g. \'["Peel", "Boil"]\'' },
                   cookTime: { type: "integer" },
-                  image: { type: "string", format: "binary" },
+                  images: {
+                    type: "array",
+                    items: { type: "string", format: "binary" },
+                    maxItems: 6,
+                    description: "Up to 6 image files, field name repeated per file",
+                  },
                 },
               },
             },
@@ -712,7 +733,7 @@ export const swaggerDocument = {
         },
         responses: {
           "201": { description: "Recipe created" },
-          "400": errorResponse("Validation error / CATEGORY_GROUP_MISMATCH"),
+          "400": errorResponse("Validation error / CATEGORY_GROUP_MISMATCH / TOO_MANY_IMAGES"),
           "401": errorResponse("Unauthorized"),
           "404": errorResponse("CATEGORY_NOT_FOUND / INGREDIENT_NOT_FOUND"),
         },
@@ -824,6 +845,10 @@ export const swaggerDocument = {
       patch: {
         tags: ["Recipes"],
         summary: "Update a recipe (owner or admin)",
+        description:
+          "New files from `images` are appended to the end, after imagesToDelete/imageOrder are " +
+          "applied. imagesToDelete removes files from Cloudinary too. imageOrder rearranges the " +
+          "surviving images — index 0 is the cover photo shown on the recipe card.",
         security: bearerAuth,
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
@@ -839,7 +864,20 @@ export const swaggerDocument = {
                   ingredients: { type: "string", description: "JSON string" },
                   steps: { type: "string", description: "JSON string" },
                   cookTime: { type: "integer" },
-                  image: { type: "string", format: "binary" },
+                  images: {
+                    type: "array",
+                    items: { type: "string", format: "binary" },
+                    maxItems: 6,
+                    description: "New image files to append (up to 6 total after existing + new)",
+                  },
+                  imagesToDelete: {
+                    type: "string",
+                    description: 'JSON string array of publicId, e.g. \'["home-recipes/recipes/.../abcd1234"]\'',
+                  },
+                  imageOrder: {
+                    type: "string",
+                    description: "JSON string array of publicId in the desired order",
+                  },
                 },
               },
             },
@@ -847,7 +885,7 @@ export const swaggerDocument = {
         },
         responses: {
           "200": { description: "Recipe updated" },
-          "400": errorResponse("Validation error / CATEGORY_GROUP_MISMATCH"),
+          "400": errorResponse("Validation error / CATEGORY_GROUP_MISMATCH / TOO_MANY_IMAGES"),
           "401": errorResponse("Unauthorized"),
           "403": errorResponse("RECIPE_ACCESS_DENIED"),
           "404": errorResponse("RECIPE_NOT_FOUND / CATEGORY_NOT_FOUND / INGREDIENT_NOT_FOUND"),

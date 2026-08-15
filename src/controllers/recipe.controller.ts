@@ -36,17 +36,23 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
 };
 
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
-  const recipe = await recipeService.createRecipe(req.user!.id, req.body, req.file?.buffer);
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  const recipe = await recipeService.createRecipe(
+    req.user!.id,
+    req.body,
+    files.map((file) => file.buffer),
+  );
   res.status(201).json({ status: 201, data: { recipe } });
 };
 
 export const updateRecipe = async (req: Request, res: Response): Promise<void> => {
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   const recipe = await recipeService.updateRecipe(
     req.params.id as string,
     req.user!.id,
     req.user!.role,
     req.body,
-    req.file?.buffer,
+    files.map((file) => file.buffer),
   );
   res.status(200).json({ status: 200, data: { recipe } });
 };
