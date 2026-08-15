@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { Category, ICategory } from "../models/category";
 import { Recipe } from "../models/recipe";
 import { Group } from "../types/group";
@@ -10,10 +11,36 @@ interface CategoryPayload {
   group: Group;
 }
 
-export const getCategories = async (group?: string): Promise<ICategory[]> => {
+// Plain shape (not `extends ICategory`) since these come from `.lean()` —
+// a lean result isn't a Mongoose Document and doesn't have its methods.
+export interface CategoryWithRecipeCount {
+  _id: Types.ObjectId;
+  name: MultilingualName;
+  group: Group;
+  imageUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  recipeCount: number;
+}
+
+export const getCategories = async (group?: string): Promise<CategoryWithRecipeCount[]> => {
   const filter = group ? { group } : {};
   // .lean(): read-only list, never saved — skips hydrating full documents.
-  return Category.find(filter).sort({ "name.uk": 1 }).lean<ICategory[]>();
+  // recipeCount comes from a single grouped aggregation rather than one
+  // countDocuments() per category, so the list stays a fixed two queries
+  // regardless of how many categories exist.
+  const [categories, counts] = await Promise.all([
+    Category.find(filter).sort({ "name.uk": 1 }).lean<ICategory[]>(),
+    Recipe.aggregate<{ _id: unknown; count: number }>([
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const recipeCountByCategoryId = new Map(counts.map((entry) => [String(entry._id), entry.count]));
+  return categories.map((category) => ({
+    ...category,
+    recipeCount: recipeCountByCategoryId.get(String(category._id)) ?? 0,
+  }));
 };
 
 export const createCategory = async (
