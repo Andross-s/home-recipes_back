@@ -36,3 +36,7 @@ export const uploadImage = (
 
     uploadStream.end(fileBuffer);
   });
+
+export const deleteImage = async (publicId: string): Promise<void> => {
+  await cloudinary.uploader.destroy(publicId);
+};

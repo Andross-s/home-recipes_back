@@ -27,4 +27,10 @@ export const updateRecipeSchema = Joi.object({
   ingredients: Joi.array().items(recipeIngredientSchema),
   steps: Joi.array().items(Joi.string().trim().min(1)).min(1),
   cookTime: Joi.number().integer().positive(),
-}).min(1);
+  // publicIds of existing images — see recipe.service.ts for how these are applied.
+  imagesToDelete: Joi.array().items(Joi.string()),
+  imageOrder: Joi.array().items(Joi.string()),
+});
+// No .min(1): a PATCH that only attaches new image files (no other body
+// fields) is valid and arrives with an empty req.body — files live on
+// req.files, not req.body, so Joi can't see them here.

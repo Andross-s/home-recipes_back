@@ -81,16 +81,28 @@ REST API для pet-проєкту **Home Recipes** — сайту з рецеп
 
 - `npm run seed` — наповнити базу стартовими категоріями/інгредієнтами (ідемпотентно,
   безпечно запускати повторно)
+- `npm run migrate:recipe-images` — одноразова міграція (див. [Міграції](#міграції))
 - `npm run lint` — перевірка коду ESLint
 - `npm run lint:fix` — автоматичне виправлення
 - `npm run format` — форматування Prettier
+
+## Міграції
+
+Одноразові скрипти в `src/db/`, безпечні для повторного запуску (пропускають
+уже мігровані документи):
+
+- **`migrate-recipe-images.ts`** (`npm run migrate:recipe-images`) — переносить
+  старе поле `imageUrl: String` у нове `images: [{ url, publicId: null }]` і
+  видаляє `imageUrl`. `publicId` виставляється в `null`, бо для вже завантажених
+  зображень (деякі — навіть не через наш Cloudinary-акаунт) реальний
+  Cloudinary `public_id` невідомий.
 
 ## Структура проєкту
 
 ```
 src/
 ├── controllers/   # тонкі контролери: req → service → response
-├── db/            # підключення до MongoDB, seed-скрипт
+├── db/            # підключення до MongoDB, seed- та міграційні скрипти
 ├── docs/          # Swagger/OpenAPI специфікація
 ├── middlewares/   # валідація (Joi), авторизація, rate-limit, обробка помилок
 ├── models/        # Mongoose-моделі + Joi-схеми
@@ -161,6 +173,12 @@ src/
 
 ### Recipes
 
+Рецепт має `images: [{ url, publicId }]` — до 6 фото, перше в масиві вважається
+головним (показується на картці в каталозі). `publicId` потрібен лише бекенду
+для видалення з Cloudinary; для рецептів, змігрованих зі старого `imageUrl`
+(див. [Міграції](#міграції) нижче), `publicId` буде `null` — такі фото можна
+показати, але не можна видалити через API (невідомий Cloudinary-акаунт джерела).
+
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
 | GET | `/api/recipes` | Список з фільтрами (`group`, `category`, `ingredient`, `search`) і пагінацією | Public |
@@ -169,9 +187,9 @@ src/
 | POST | `/api/recipes/favorites/:id` | Додати в обране | Private |
 | DELETE | `/api/recipes/favorites/:id` | Прибрати з обраного | Private |
 | GET | `/api/recipes/:id` | Деталі рецепта (populate category/ingredients/owner.name) | Public |
-| POST | `/api/recipes` | Створити рецепт | Private |
-| PATCH | `/api/recipes/:id` | Оновити рецепт | Owner/Admin |
-| DELETE | `/api/recipes/:id` | Видалити рецепт | Owner/Admin |
+| POST | `/api/recipes` | Створити рецепт, до 6 фото через `images` (multipart), фото не обов'язкове | Private |
+| PATCH | `/api/recipes/:id` | Оновити; підтримує `imagesToDelete: [publicId]`, `imageOrder: [publicId]`, нові файли `images` додаються в кінець | Owner/Admin |
+| DELETE | `/api/recipes/:id` | Видалити рецепт (+ усі його фото з Cloudinary) | Owner/Admin |
 
 ### Admin
 

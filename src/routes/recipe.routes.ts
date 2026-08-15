@@ -5,6 +5,7 @@ import { imageUpload } from "../middlewares/imageUpload";
 import { isValidId } from "../middlewares/isValidId";
 import { parseJsonFields } from "../middlewares/parseJsonFields";
 import { validateBody } from "../middlewares/validateBody";
+import { MAX_RECIPE_IMAGES } from "../models/recipe";
 import { recipeSchema, updateRecipeSchema } from "../models/recipe.schemas";
 import { ctrlWrapper } from "../utils/ctrlWrapper";
 
@@ -31,7 +32,7 @@ router.get("/:id", isValidId(), ctrlWrapper(recipeController.getRecipeById));
 router.post(
   "/",
   authenticate,
-  imageUpload.single("image"),
+  imageUpload.array("images", MAX_RECIPE_IMAGES),
   parseJsonFields("ingredients", "steps"),
   validateBody(recipeSchema),
   ctrlWrapper(recipeController.createRecipe),
@@ -40,8 +41,8 @@ router.patch(
   "/:id",
   authenticate,
   isValidId(),
-  imageUpload.single("image"),
-  parseJsonFields("ingredients", "steps"),
+  imageUpload.array("images", MAX_RECIPE_IMAGES),
+  parseJsonFields("ingredients", "steps", "imagesToDelete", "imageOrder"),
   validateBody(updateRecipeSchema),
   ctrlWrapper(recipeController.updateRecipe),
 );
