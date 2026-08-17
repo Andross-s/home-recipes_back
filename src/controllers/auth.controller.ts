@@ -33,6 +33,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
+export const loginWithGoogle = async (req: Request, res: Response): Promise<void> => {
+  const { user, accessToken, refreshToken } = await authService.loginWithGoogle(req.body.idToken);
+  res.status(200).json({
+    status: 200,
+    data: { user, accessToken, refreshToken },
+  });
+};
+
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   const tokens = await sessionService.refreshSession(req.body.refreshToken);
   res.status(200).json({ status: 200, data: tokens });

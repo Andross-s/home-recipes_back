@@ -4,6 +4,7 @@ import { authRateLimiter } from "../middlewares/authRateLimiter";
 import { authenticate } from "../middlewares/authenticate";
 import { validateBody } from "../middlewares/validateBody";
 import {
+  googleOAuthSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
@@ -23,6 +24,11 @@ router.post(
   ctrlWrapper(authController.resendVerification),
 );
 router.post("/login", validateBody(loginSchema), ctrlWrapper(authController.login));
+router.post(
+  "/oauth/google",
+  validateBody(googleOAuthSchema),
+  ctrlWrapper(authController.loginWithGoogle),
+);
 router.post("/refresh", validateBody(refreshSchema), ctrlWrapper(authController.refresh));
 router.post("/logout", authenticate, ctrlWrapper(authController.logout));
 

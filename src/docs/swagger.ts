@@ -55,6 +55,8 @@ export const swaggerDocument = {
           _id: { type: "string", example: "665f1c2b8e1d2c0012a3b456" },
           name: { type: "string", example: "Andross" },
           email: { type: "string", format: "email", example: "user@example.com" },
+          authProvider: { type: "string", enum: ["email", "google"] },
+          googleId: { type: "string", nullable: true, description: "Present only for authProvider: 'google'" },
           avatarUrl: { type: "string", nullable: true },
           role: { type: "string", enum: ["user", "admin"] },
           isBlocked: { type: "boolean" },
@@ -284,6 +286,58 @@ export const swaggerDocument = {
           },
           "401": errorResponse("INVALID_CREDENTIALS"),
           "403": errorResponse("ACCOUNT_BLOCKED or ACCOUNT_NOT_VERIFIED"),
+          "429": errorResponse("TOO_MANY_REQUESTS"),
+        },
+      },
+    },
+    "/auth/oauth/google": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log in or register with Google",
+        description:
+          "Verifies the Google ID token's signature/audience server-side (never trusts client-supplied " +
+          "claims). Logs in if googleId already matches a user; creates a new authProvider: 'google' " +
+          "user (pre-verified) if neither googleId nor email match anyone; refuses to silently link " +
+          "accounts if the email already belongs to an existing (e.g. password-based) user.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["idToken"],
+                properties: {
+                  idToken: { type: "string", description: "Google ID token from Google Identity Services" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Logged in (existing or newly created account)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    status: { type: "integer" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        user: { $ref: "#/components/schemas/User" },
+                        accessToken: { type: "string" },
+                        refreshToken: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": errorResponse("INVALID_GOOGLE_TOKEN"),
+          "403": errorResponse("ACCOUNT_BLOCKED"),
+          "409": errorResponse("EMAIL_REGISTERED_WITH_PASSWORD — log in with email/password instead"),
           "429": errorResponse("TOO_MANY_REQUESTS"),
         },
       },

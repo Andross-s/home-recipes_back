@@ -12,6 +12,10 @@ export const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+export const googleOAuthSchema = Joi.object({
+  idToken: Joi.string().required(),
+});
+
 export const updateUserSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).required(),
 });

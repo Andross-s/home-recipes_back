@@ -1,9 +1,12 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import { IUser, User } from "../models/user";
 import { HttpError } from "../utils/HttpError";
 import { sendVerificationEmail } from "./email.service";
 import { createSession } from "./session.service";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_VERIFICATION_COOLDOWN_MS = 60 * 1000;
@@ -28,6 +31,7 @@ export const register = async (payload: RegisterPayload): Promise<void> => {
     name: payload.name,
     email: payload.email,
     password: hashedPassword,
+    authProvider: "email",
     verificationToken,
     verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
   });
@@ -115,7 +119,10 @@ export const login = async (payload: LoginPayload): Promise<LoginResult> => {
   // and this document is returned to the client — it must stay hydrated so
   // toJSON's transform strips the password before serialization.
   const user = await User.findOne({ email: payload.email }).select("+password");
-  if (!user) {
+  if (!user || !user.password) {
+    // !user.password covers Google-only accounts (authProvider: "google")
+    // that never set a password — same generic error, so this endpoint never
+    // reveals which accounts exist or how they authenticate.
     throw new HttpError(401, "INVALID_CREDENTIALS", "Email or password is invalid");
   }
 
@@ -130,6 +137,87 @@ export const login = async (payload: LoginPayload): Promise<LoginResult> => {
 
   if (process.env.REQUIRE_EMAIL_VERIFICATION === "true" && !user.isVerified) {
     throw new HttpError(403, "ACCOUNT_NOT_VERIFIED", "Email is not verified yet");
+  }
+
+  const { accessToken, refreshToken } = await createSession({
+    role: user.role,
+    id: user._id.toString(),
+  });
+
+  return { user, accessToken, refreshToken };
+};
+
+interface GoogleTokenPayload {
+  googleId: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+const verifyGoogleIdToken = async (idToken: string): Promise<GoogleTokenPayload> => {
+  let ticket;
+  try {
+    ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+  } catch {
+    // Signature/audience/expiry check failed — never trust client-supplied
+    // claims without this verification.
+    throw new HttpError(401, "INVALID_GOOGLE_TOKEN", "Google ID token is invalid or expired");
+  }
+
+  const payload = ticket.getPayload();
+  if (!payload?.sub || !payload.email) {
+    throw new HttpError(
+      401,
+      "INVALID_GOOGLE_TOKEN",
+      "Google ID token payload is missing required fields",
+    );
+  }
+
+  return {
+    googleId: payload.sub,
+    email: payload.email.toLowerCase(),
+    name: payload.name ?? payload.email,
+    picture: payload.picture,
+  };
+};
+
+export const loginWithGoogle = async (idToken: string): Promise<LoginResult> => {
+  const { googleId, email, name, picture } = await verifyGoogleIdToken(idToken);
+
+  let user = await User.findOne({ googleId });
+
+  if (!user) {
+    // Matches on email alone (not `authProvider: "email"`), so this also
+    // catches accounts created before authProvider existed as a field —
+    // any pre-existing user with this email, of any provider, means we must
+    // not silently create a second account (and a second one would violate
+    // the unique email index anyway).
+    const emailTaken = await User.exists({ email });
+    if (emailTaken) {
+      throw new HttpError(
+        409,
+        "EMAIL_REGISTERED_WITH_PASSWORD",
+        "This email is already registered with a password — log in with email and password instead",
+      );
+    }
+
+    user = await User.create({
+      authProvider: "google",
+      googleId,
+      email,
+      name,
+      avatarUrl: picture,
+      // Google has already verified ownership of this email address.
+      isVerified: true,
+      role: "user",
+    });
+  }
+
+  if (user.isBlocked) {
+    throw new HttpError(403, "ACCOUNT_BLOCKED", "This account has been blocked");
   }
 
   const { accessToken, refreshToken } = await createSession({

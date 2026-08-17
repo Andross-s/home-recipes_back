@@ -1,11 +1,13 @@
 import { Document, Schema, Types, model } from "mongoose";
-import { UserRole } from "../types/auth";
+import { AuthProvider, UserRole } from "../types/auth";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  authProvider: AuthProvider;
+  googleId?: string;
   avatarUrl?: string;
   role: UserRole;
   isBlocked: boolean;
@@ -22,7 +24,19 @@ const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true, select: false },
+    // Only email-provider accounts have a password; Google accounts authenticate
+    // via verified Google ID tokens instead.
+    password: {
+      type: String,
+      required: function (this: IUser) {
+        return this.authProvider === "email";
+      },
+      select: false,
+    },
+    authProvider: { type: String, enum: ["email", "google"], required: true, default: "email" },
+    // sparse: only email-provider accounts lack a googleId, and sparse keeps
+    // the unique index from treating all of those "missing" values as a clash.
+    googleId: { type: String, unique: true, sparse: true },
     avatarUrl: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isBlocked: { type: Boolean, default: false },
