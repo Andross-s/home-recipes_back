@@ -84,6 +84,25 @@ export const updateUserBlockStatus = async (id: string, isBlocked: boolean): Pro
   return user;
 };
 
+// Lets an admin manually flip email verification — e.g. to unblock a user
+// stuck behind a broken/undelivered verification email, or to revert a
+// mistaken verification. Clears any pending verification token/expiry so a
+// manually-verified account doesn't have a stale token still floating around.
+export const updateUserVerifiedStatus = async (id: string, isVerified: boolean): Promise<IUser> => {
+  const user = await User.findById(id);
+  if (!user) {
+    throw new HttpError(404, "USER_NOT_FOUND", "User not found");
+  }
+
+  user.isVerified = isVerified;
+  if (isVerified) {
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+  }
+  await user.save();
+  return user;
+};
+
 export const deleteUser = async (id: string): Promise<void> => {
   const user = await User.findById(id);
   if (!user) {

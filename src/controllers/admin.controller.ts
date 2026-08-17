@@ -42,6 +42,14 @@ export const updateUserBlockStatus = async (req: Request, res: Response): Promis
   res.status(200).json({ status: 200, data: { user } });
 };
 
+export const updateUserVerifiedStatus = async (req: Request, res: Response): Promise<void> => {
+  const user = await adminService.updateUserVerifiedStatus(
+    req.params.id as string,
+    req.body.isVerified,
+  );
+  res.status(200).json({ status: 200, data: { user } });
+};
+
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   await adminService.deleteUser(req.params.id as string);
   res.status(204).send();

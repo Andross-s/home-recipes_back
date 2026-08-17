@@ -31,3 +31,7 @@ export const updateUserRoleSchema = Joi.object({
 export const updateUserBlockSchema = Joi.object({
   isBlocked: Joi.boolean().required(),
 });
+
+export const updateUserVerifiedSchema = Joi.object({
+  isVerified: Joi.boolean().required(),
+});

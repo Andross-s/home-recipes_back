@@ -4,7 +4,11 @@ import { authenticate } from "../middlewares/authenticate";
 import { isAdmin } from "../middlewares/isAdmin";
 import { isValidId } from "../middlewares/isValidId";
 import { validateBody } from "../middlewares/validateBody";
-import { updateUserBlockSchema, updateUserRoleSchema } from "../models/user.schemas";
+import {
+  updateUserBlockSchema,
+  updateUserRoleSchema,
+  updateUserVerifiedSchema,
+} from "../models/user.schemas";
 import { ctrlWrapper } from "../utils/ctrlWrapper";
 
 const router = Router();
@@ -23,6 +27,12 @@ router.patch(
   isValidId(),
   validateBody(updateUserBlockSchema),
   ctrlWrapper(adminController.updateUserBlockStatus),
+);
+router.patch(
+  "/users/:id/verify",
+  isValidId(),
+  validateBody(updateUserVerifiedSchema),
+  ctrlWrapper(adminController.updateUserVerifiedStatus),
 );
 router.delete("/users/:id", isValidId(), ctrlWrapper(adminController.deleteUser));
 
