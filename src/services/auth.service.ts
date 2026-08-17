@@ -32,13 +32,13 @@ export const register = async (payload: RegisterPayload): Promise<void> => {
     verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
   });
 
-  try {
-    await sendVerificationEmail(user, verificationToken);
-  } catch (error) {
-    // Registration should still succeed if the mail provider is temporarily
-    // unavailable — the user can request a new verification email later.
+  // Fire-and-forget: the client shouldn't wait on the SMTP round trip to get
+  // a registration response, and registration should still succeed if the
+  // mail provider is slow or temporarily unavailable — the user can request
+  // a new verification email later.
+  sendVerificationEmail(user, verificationToken).catch((error) => {
     console.error("Failed to send verification email:", error);
-  }
+  });
 };
 
 export const verifyEmail = async (token: string): Promise<void> => {
@@ -94,7 +94,9 @@ export const resendVerification = async (email: string): Promise<void> => {
   user.lastVerificationEmailSentAt = new Date();
   await user.save();
 
-  await sendVerificationEmail(user, verificationToken);
+  sendVerificationEmail(user, verificationToken).catch((error) => {
+    console.error("Failed to send verification email:", error);
+  });
 };
 
 interface LoginPayload {
