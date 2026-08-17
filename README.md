@@ -130,8 +130,16 @@ src/
 | GET | `/api/auth/verify-email/:token` | Підтвердження email за токеном | Public |
 | POST | `/api/auth/resend-verification` | Повторна відправка листа підтвердження (1 раз/60с на email) | Public |
 | POST | `/api/auth/login` | Логін, видає access/refresh токени | Public |
+| POST | `/api/auth/oauth/google` | Вхід/реєстрація через Google (`{ idToken }`, верифікується через `google-auth-library`) | Public |
 | POST | `/api/auth/refresh` | Оновлення пари токенів | Public |
 | POST | `/api/auth/logout` | Видалення поточної сесії | Private |
+
+**Google-вхід**: `authProvider` на User — `'email'` або `'google'`. Якщо `googleId`
+не знайдено, але email вже зареєстрований (будь-яким провайдером) — акаунти
+**не** лінкуються автоматично (ризик захоплення чужого акаунта), повертається
+`409 EMAIL_REGISTERED_WITH_PASSWORD`. Новий google-акаунт одразу `isVerified: true`
+(Google вже підтвердив email) і без `password`. Потрібна змінна `GOOGLE_CLIENT_ID`
+(OAuth 2.0 Client ID з [Google Cloud Console](https://console.cloud.google.com/apis/credentials)).
 
 ### Users
 
